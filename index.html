@@ -2,78 +2,101 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>加油，拓海同学！</title>
     <style>
         :root {
-            --btn-size: 64px;
-            --hitbox-expand: 20px;
-            --bottom-gap: 25px;
-            --side-gap: 20px;
+            /* 提高按键基准高度，避开底部遮挡 */
+            --btn-size: 16vw; 
+            --max-btn-size: 75px;
+            /* 关键：使用百分比 + 安全区域，确保按键位置更合理 */
+            --control-bottom: calc(12% + env(safe-area-inset-bottom)); 
         }
 
         body {
-            margin: 0; padding: 0; background-color: #000;
+            margin: 0; padding: 0;
+            background-color: #000;
+            /* 使用 dvh 确保在浏览器工具栏弹出时高度依然准确 */
+            height: 100dvh; 
             display: flex; justify-content: center; align-items: center;
-            height: 100vh; overflow: hidden; touch-action: none;
+            overflow: hidden; touch-action: none;
             font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
         }
 
         #game-wrapper {
-            position: relative; width: 100%; max-width: 450px; height: 100%;
-            background: #000; overflow: hidden;
+            position: relative;
+            width: 100%; height: 100%;
+            max-width: 500px; /* 限制最大宽度，平板上也不会太奇怪 */
+            background: #000;
+            display: flex; flex-direction: column;
         }
 
-        canvas { display: block; width: 100%; height: 100%; }
+        canvas {
+            width: 100%; height: 100%;
+            /* 保持比例，多余部分留黑边（类似电影） */
+            object-fit: contain; 
+            background: #050508;
+        }
 
-        /* 得分 UI */
+        /* HUD 适配 */
         #hud {
-            position: absolute; top: 20px; left: 0; right: 0;
-            display: flex; justify-content: center; z-index: 10; pointer-events: none;
+            position: absolute; top: calc(15px + env(safe-area-inset-top));
+            left: 0; right: 0;
+            display: flex; justify-content: center; pointer-events: none; z-index: 10;
         }
         .stat-box {
             background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
-            padding: 6px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2);
-            color: white; font-size: 14px; font-weight: bold; letter-spacing: 1px;
+            padding: 5px 18px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2);
+            color: white; font-size: 14px; font-weight: bold;
         }
 
-        /* 按键布局 */
+        /* --- 动态适配的按键布局 --- */
         .touch-controls {
-            position: absolute; bottom: var(--bottom-gap); left: 0; right: 0;
-            padding: 0 var(--side-gap);
+            position: absolute; 
+            bottom: var(--control-bottom); /* 按键向上挪动，采用百分比布局 */
+            left: 0; right: 0;
+            padding: 0 6%;
             display: flex; justify-content: space-between; align-items: flex-end;
             z-index: 100; pointer-events: none;
         }
-        .dir-group { display: flex; gap: 12px; pointer-events: auto; }
-        .jump-group { pointer-events: auto; }
-        .btn {
-            position: relative; width: var(--btn-size); height: var(--btn-size);
-            background: rgba(255,255,255,0.12); backdrop-filter: blur(8px);
-            border: 1px solid rgba(255,255,255,0.2); border-radius: 50%;
-            display: flex; justify-content: center; align-items: center;
-            color: white; font-size: 20px; user-select: none;
-            -webkit-tap-highlight-color: transparent; transition: transform 0.05s;
-        }
-        .btn::after {
-            content: ''; position: absolute; top: calc(-1 * var(--hitbox-expand));
-            left: calc(-1 * var(--hitbox-expand)); right: calc(-1 * var(--hitbox-expand));
-            bottom: calc(-1 * var(--hitbox-expand)); border-radius: 50%;
-        }
-        .btn:active { transform: scale(0.85); background: rgba(255,255,255,0.3); }
-        #jump-btn { width: 76px; height: 76px; background: rgba(0, 168, 255, 0.2); border-color: rgba(0, 168, 255, 0.4); font-weight: bold; font-size: 16px; }
 
-        /* 结算面板 */
+        .dir-group { display: flex; gap: 15px; pointer-events: auto; }
+        .jump-group { pointer-events: auto; }
+
+        .btn {
+            width: var(--btn-size); height: var(--btn-size);
+            max-width: var(--max-btn-size); max-height: var(--max-btn-size);
+            background: rgba(255,255,255,0.15); backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.25); border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            color: white; font-size: 22px; user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* 触控感应区扩大 */
+        .btn::before {
+            content: ''; position: absolute;
+            top: -15px; left: -15px; right: -15px; bottom: -15px;
+        }
+
+        .btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.35); }
+        #jump-btn { 
+            width: calc(var(--btn-size) * 1.2); height: calc(var(--btn-size) * 1.2);
+            max-width: 90px; max-height: 90px;
+            background: rgba(0, 168, 255, 0.25); font-weight: bold; font-size: 16px; 
+        }
+
+        /* 结算面板适配 */
         #overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.96); display: none;
+            background: rgba(255, 255, 255, 0.97); display: none;
             flex-direction: column; justify-content: center; align-items: center; z-index: 200;
-            text-align: center; padding: 20px; box-sizing: border-box;
+            padding: 30px; box-sizing: border-box;
         }
-        #status-title { margin: 0; color: #333; font-size: 1.8rem; line-height: 1.4; }
-        #overlay p { color: #666; font-size: 1.1rem; margin: 10px 0; }
+        #status-title { margin: 0; color: #333; font-size: 1.6rem; white-space: pre-wrap; line-height: 1.5; text-align: center; }
         #overlay button {
-            margin-top: 30px; padding: 15px 50px; background: #000; color: #fff;
-            border: none; border-radius: 50px; font-size: 1rem; cursor: pointer;
+            margin-top: 40px; padding: 15px 50px; background: #000; color: #fff;
+            border: none; border-radius: 50px; font-size: 1.1rem;
         }
     </style>
 </head>
@@ -107,13 +130,13 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const LOGICAL_W = 450;
-    const LOGICAL_H = 800;
+    const LOGICAL_H = 800; // 这里的逻辑比例是固定 9:16
     canvas.width = LOGICAL_W;
     canvas.height = LOGICAL_H;
 
     const CONFIG = {
         gravity: 0.65,
-        jump: -13,
+        jump: -13.5,
         moveSpeed: 7.5,
         scrollSpeed: 2.3,
         playerW: 24,
@@ -121,54 +144,24 @@
     };
 
     let state = {
-        player: {},
-        platforms: [],
-        stars: [],
-        confetti: [], // 庆祝特效粒子
-        score: 0,
-        isOver: false,
-        isWin: false,
-        lastX: LOGICAL_W / 2,
+        player: {}, platforms: [], stars: [], confetti: [],
+        score: 0, isOver: false, isWin: false, lastX: LOGICAL_W / 2,
         input: { left: false, right: false, jump: false }
     };
 
-    // --- 庆祝特效：彩带粒子系统 ---
+    // --- 庆祝粒子 ---
     function createConfetti() {
-        for (let i = 0; i < 100; i++) {
+        for (let i = 0; i < 120; i++) {
             state.confetti.push({
-                x: Math.random() * LOGICAL_W,
-                y: -Math.random() * 20,
-                vx: (Math.random() - 0.5) * 10,
-                vy: Math.random() * 5 + 2,
-                color: `hsl(${Math.random() * 360}, 80%, 60%)`,
-                size: Math.random() * 6 + 4,
-                rotation: Math.random() * 360,
-                rSpeed: (Math.random() - 0.5) * 10
+                x: Math.random() * LOGICAL_W, y: -20,
+                vx: (Math.random() - 0.5) * 12, vy: Math.random() * 6 + 3,
+                color: `hsl(${Math.random() * 360}, 85%, 60%)`,
+                size: Math.random() * 8 + 4, rotation: Math.random() * 360, rSpeed: (Math.random() - 0.5) * 15
             });
         }
     }
 
-    function updateConfetti() {
-        state.confetti.forEach(c => {
-            c.x += c.vx;
-            c.y += c.vy;
-            c.rotation += c.rSpeed;
-            if (c.y > LOGICAL_H) { c.y = -20; c.x = Math.random() * LOGICAL_W; }
-        });
-    }
-
-    function drawConfetti() {
-        state.confetti.forEach(c => {
-            ctx.save();
-            ctx.translate(c.x, c.y);
-            ctx.rotate(c.rotation * Math.PI / 180);
-            ctx.fillStyle = c.color;
-            ctx.fillRect(-c.size/2, -c.size/2, c.size, c.size/2);
-            ctx.restore();
-        });
-    }
-
-    // --- 主角绘制 ---
+    // --- 绘制主角 (拓海同学) ---
     function drawPlayer() {
         const p = state.player;
         ctx.save();
@@ -188,11 +181,10 @@
         ctx.restore();
     }
 
-    // --- 核心逻辑 ---
     function spawnPlatform(y) {
-        const width = 85 + Math.random() * 40;
-        let x = state.lastX - 140 + Math.random() * 280;
-        x = Math.max(20, Math.min(LOGICAL_W - width - 20, x));
+        const width = 85 + Math.random() * 45;
+        let x = state.lastX - 150 + Math.random() * 300;
+        x = Math.max(25, Math.min(LOGICAL_W - width - 25, x));
         state.lastX = x;
         let type = (state.score > 8 && Math.random() < 0.22) ? 'spike' : 'normal';
         state.platforms.push({ x, y, width, height: 12, type });
@@ -200,10 +192,11 @@
 
     function update() {
         if (state.isOver && !state.isWin) return;
-        
-        // 如果赢了，只更新纸屑
         if (state.isWin) {
-            updateConfetti();
+            state.confetti.forEach(c => {
+                c.x += c.vx; c.y += c.vy; c.rotation += c.rSpeed;
+                if (c.y > LOGICAL_H) { c.y = -20; c.x = Math.random() * LOGICAL_W; }
+            });
             return;
         }
 
@@ -227,7 +220,7 @@
                 p.y = plat.y - CONFIG.playerH; p.vy = 0;
                 if (state.input.jump) p.vy = CONFIG.jump;
             }
-            if (plat.y < -20) {
+            if (plat.y < -30) {
                 state.platforms.splice(i, 1);
                 state.score++;
                 document.getElementById('floor-val').innerText = state.score;
@@ -235,10 +228,10 @@
             }
         }
 
-        if (state.platforms[state.platforms.length-1].y < LOGICAL_H) {
+        if (state.platforms[state.platforms.length-1].y < LOGICAL_H + 100) {
             spawnPlatform(state.platforms[state.platforms.length-1].y + 115);
         }
-        if (p.y > LOGICAL_H || p.y < -60) endGame(false);
+        if (p.y > LOGICAL_H || p.y < -100) endGame(false);
 
         state.stars.forEach(s => {
             s.opacity += s.pulse;
@@ -263,13 +256,18 @@
                 ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(plat.x, plat.y, plat.width, 12, 6); ctx.fill();
             } else {
                 ctx.fillStyle = '#ff4757'; ctx.beginPath(); ctx.roundRect(plat.x, plat.y+4, plat.width, 8, 4); ctx.fill();
-                for(let i=0; i<plat.width; i+=10) { ctx.moveTo(plat.x+i, plat.y+4); ctx.lineTo(plat.x+i+5, plat.y-4); ctx.lineTo(plat.x+i+10, plat.y+4); }
+                for(let i=0; i<plat.width; i+=12) { ctx.moveTo(plat.x+i, plat.y+4); ctx.lineTo(plat.x+i+6, plat.y-4); ctx.lineTo(plat.x+i+12, plat.y+4); }
                 ctx.fill();
             }
         });
 
         if (!state.isWin) drawPlayer();
-        if (state.isWin) drawConfetti();
+        else {
+            state.confetti.forEach(c => {
+                ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.rotation * Math.PI/180);
+                ctx.fillStyle = c.color; ctx.fillRect(-c.size/2, -c.size/2, c.size, c.size/2); ctx.restore();
+            });
+        }
     }
 
     function initGame() {
@@ -279,39 +277,30 @@
         document.getElementById('overlay').style.display = 'none';
         state.player = { x: LOGICAL_W/2 - 12, y: 150, vx: 0, vy: 0, facing: 1 };
         state.platforms = [{ x: LOGICAL_W/2-60, y: 350, width: 120, type: 'normal' }];
-        for(let i=0; i<7; i++) spawnPlatform(350 + (i+1)*115);
-        state.stars = Array.from({length: 40}, () => ({
+        for(let i=0; i<8; i++) spawnPlatform(350 + (i+1)*115);
+        state.stars = Array.from({length: 45}, () => ({
             x: Math.random() * LOGICAL_W, y: Math.random() * LOGICAL_H,
             size: Math.random() * 2, opacity: Math.random(), pulse: 0.01 + Math.random()*0.02
         }));
         loop();
     }
 
-    function loop() {
-        update(); draw();
-        if (!state.isOver || state.isWin) requestAnimationFrame(loop);
-    }
+    function loop() { update(); draw(); if (!state.isOver || state.isWin) requestAnimationFrame(loop); }
 
     function endGame(win) {
         state.isOver = true;
-        const title = document.getElementById('status-title');
         const overlay = document.getElementById('overlay');
-        const subMsg = document.getElementById('sub-msg');
-        
         overlay.style.display = 'flex';
         document.getElementById('final-floor').innerText = state.score;
-
         if (win) {
             state.isWin = true;
-            title.innerText = "你办到了呢，\n拓海同学。";
-            title.style.color = "#9a9ee6"; 
-            subMsg.innerHTML = "谢谢你。";
+            document.getElementById('status-title').innerText = "你办到了呢，\n拓海同学。";
+            document.getElementById('status-title').style.color = "#FF4081";
+            document.getElementById('sub-msg').innerHTML = "成功抵达 100 层！";
             createConfetti();
         } else {
-            state.isWin = false;
-            title.innerText = "FAILED";
-            title.style.color = "#ff4757";
-            subMsg.innerHTML = `你到达了第 ${state.score} 层`;
+            document.getElementById('status-title').innerText = "FAILED";
+            document.getElementById('status-title').style.color = "#ff4757";
         }
     }
 
@@ -332,10 +321,7 @@
         btn.addEventListener('touchend', e => { e.preventDefault(); handleInput(key, false); }, {passive: false});
         btn.addEventListener('touchcancel', e => { e.preventDefault(); handleInput(key, false); }, {passive: false});
     };
-
-    bindTouch('left-btn', 'ArrowLeft');
-    bindTouch('right-btn', 'ArrowRight');
-    bindTouch('jump-btn', 'ArrowUp');
+    bindTouch('left-btn', 'ArrowLeft'); bindTouch('right-btn', 'ArrowRight'); bindTouch('jump-btn', 'ArrowUp');
 
     initGame();
 </script>
