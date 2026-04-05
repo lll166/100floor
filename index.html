@@ -3,98 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>极简星空 - 触控优化版</title>
+    <title>极简星空 - 人体工学优化版</title>
     <style>
         :root {
-            --ui-bg: rgba(255, 255, 255, 0.15);
-            --ui-border: rgba(255, 255, 255, 0.25);
-            /* --- 触发距离控制 --- */
-            --hitbox-size: 100px; /* 实际手指感应区域的大小 */
-            --visual-size: 65px;  /* 眼睛看到的按钮大小 */
+            /* --- 这里的参数决定了操作舒适度 --- */
+            --btn-size: 64px;       /* 按钮视觉大小 */
+            --hitbox-expand: 20px;  /* 触发区域向外延伸的额外距离 */
+            --bottom-gap: 25px;     /* 距离屏幕底部的距离 */
+            --side-gap: 20px;       /* 距离屏幕边缘的距离 */
         }
 
         body {
-            margin: 0; padding: 0;
-            background-color: #000;
+            margin: 0; padding: 0; background-color: #000;
             display: flex; justify-content: center; align-items: center;
             height: 100vh; overflow: hidden; touch-action: none;
             font-family: -apple-system, sans-serif;
         }
 
         #game-wrapper {
-            position: relative;
-            width: 100%; max-width: 450px; height: 100%; max-height: 850px;
+            position: relative; width: 100%; max-width: 450px; height: 100%;
             background: #000; overflow: hidden;
         }
 
         canvas { display: block; width: 100%; height: 100%; }
 
-        /* 顶部 UI */
+        /* 得分 UI */
         #hud {
-            position: absolute; top: 25px; left: 0; right: 0;
-            display: flex; justify-content: center; z-index: 10;
+            position: absolute; top: 20px; left: 0; right: 0;
+            display: flex; justify-content: center; z-index: 10; pointer-events: none;
         }
         .stat-box {
             background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
-            padding: 8px 25px; border-radius: 30px; border: 1px solid var(--ui-border);
-            color: white; font-weight: bold; letter-spacing: 1px;
+            padding: 6px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2);
+            color: white; font-size: 14px; font-weight: bold; letter-spacing: 1px;
         }
 
-        /* --- 优化的触控区域布局 --- */
-        #controls {
-            position: absolute; bottom: 40px; left: 0; right: 0;
-            padding: 0 25px;
-            display: flex; justify-content: space-between; /* 左右分开布局 */
-            align-items: flex-end; z-index: 20;
-            pointer-events: none; /* 让容器不挡住点击 */
+        /* --- 人体工学按键布局 --- */
+        .touch-controls {
+            position: absolute; bottom: var(--bottom-gap); left: 0; right: 0;
+            padding: 0 var(--side-gap);
+            display: flex; justify-content: space-between; align-items: flex-end;
+            z-index: 100; pointer-events: none;
         }
 
-        .direction-group { display: flex; gap: 20px; pointer-events: auto; }
+        /* 左侧方向键组：紧凑排布，减少拇指移动距离 */
+        .dir-group {
+            display: flex; gap: 12px; pointer-events: auto;
+        }
+
+        /* 右侧跳跃键：位于右拇指自然下落位置 */
         .jump-group { pointer-events: auto; }
 
-        .ctrl-btn {
-            position: relative;
-            width: var(--visual-size); height: var(--visual-size);
-            background: var(--ui-bg); backdrop-filter: blur(10px);
-            border: 1px solid var(--ui-border); border-radius: 50%;
+        .btn {
+            position: relative; width: var(--btn-size); height: var(--btn-size);
+            background: rgba(255,255,255,0.12); backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.2); border-radius: 50%;
             display: flex; justify-content: center; align-items: center;
-            color: white; font-size: 24px; font-weight: bold;
-            transition: transform 0.1s, background 0.1s;
-            user-select: none; -webkit-tap-highlight-color: transparent;
+            color: white; font-size: 20px; user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: transform 0.05s;
         }
 
-        /* 核心：通过伪元素扩大触发距离 */
-        .ctrl-btn::after {
-            content: '';
-            position: absolute;
-            top: 50%; left: 50%;
-            width: var(--hitbox-size); height: var(--hitbox-size);
-            transform: translate(-50%, -50%);
+        /* 扩大实际触发区域而不改变视觉大小 */
+        .btn::after {
+            content: ''; position: absolute;
+            top: calc(-1 * var(--hitbox-expand)); left: calc(-1 * var(--hitbox-expand));
+            right: calc(-1 * var(--hitbox-expand)); bottom: calc(-1 * var(--hitbox-expand));
             border-radius: 50%;
-            /* background: rgba(255,0,0,0.2); // 调试时可以打开，看看感应区有多大 */
         }
 
-        .ctrl-btn:active {
-            transform: scale(0.9);
-            background: rgba(255, 255, 255, 0.4);
-        }
+        .btn:active { transform: scale(0.85); background: rgba(255,255,255,0.3); }
 
         #jump-btn {
-            width: 85px; height: 85px; /* 跳跃键稍微大一点 */
-            background: rgba(0, 168, 255, 0.25);
-            border: 1.5px solid rgba(0, 168, 255, 0.4);
+            width: 76px; height: 76px; /* 跳跃键略大 */
+            background: rgba(0, 168, 255, 0.2);
+            border-color: rgba(0, 168, 255, 0.4);
+            font-weight: bold; font-size: 16px;
         }
 
-        /* 结算面板 */
+        /* 游戏结束 */
         #overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.95); display: none;
-            flex-direction: column; justify-content: center; align-items: center; z-index: 30;
+            background: rgba(255,255,255,0.96); display: none;
+            flex-direction: column; justify-content: center; align-items: center; z-index: 200;
         }
-        #overlay h1 { font-size: 2.5rem; color: #333; margin: 0; }
+        #overlay h1 { margin: 0; color: #333; font-size: 2rem; }
         #overlay button {
-            margin-top: 30px; padding: 15px 60px;
-            background: #000; color: #fff; border: none; border-radius: 50px; font-size: 1.1rem;
+            margin-top: 25px; padding: 12px 45px; background: #000; color: #fff;
+            border: none; border-radius: 25px; font-size: 1rem;
         }
     </style>
 </head>
@@ -113,13 +109,13 @@
 
     <canvas id="gameCanvas"></canvas>
 
-    <div id="controls">
-        <div class="direction-group">
-            <div class="ctrl-btn" id="left-btn">←</div>
-            <div class="ctrl-btn" id="right-btn">→</div>
+    <div class="touch-controls">
+        <div class="dir-group">
+            <div class="btn" id="left-btn">←</div>
+            <div class="btn" id="right-btn">→</div>
         </div>
         <div class="jump-group">
-            <div class="ctrl-btn" id="jump-btn">JUMP</div>
+            <div class="btn" id="jump-btn">JUMP</div>
         </div>
     </div>
 </div>
@@ -133,10 +129,10 @@
     canvas.height = LOGICAL_H;
 
     const CONFIG = {
-        gravity: 0.6,
+        gravity: 0.65,
         jump: -13,
-        moveSpeed: 7,
-        scrollSpeed: 2.2,
+        moveSpeed: 7.5,
+        scrollSpeed: 2.3,
         playerW: 24,
         playerH: 40
     };
@@ -151,7 +147,7 @@
         input: { left: false, right: false, jump: false }
     };
 
-    // --- 主角绘制 (红发黑挑染、拼色外套、腿部绑带) ---
+    // --- 主角绘制 (按立绘细节重绘) ---
     function drawPlayer() {
         const p = state.player;
         ctx.save();
@@ -160,47 +156,37 @@
 
         const w = CONFIG.playerW; const h = CONFIG.playerH;
 
-        // 1. 裤子 & 右腿绑带
+        // 裤子 & 右腿白绑带 (立绘特征)
         ctx.fillStyle = '#111'; ctx.fillRect(-w/2 + 4, 0, w - 8, h/2); 
         ctx.fillStyle = '#FFF'; ctx.fillRect(-w/2 + 4, 10, 2, 8); 
 
-        // 2. 拼色外套 (白色内里+深蓝/灰拼色)
+        // 拼色外套 (白色帽衫内里 + 深蓝与灰拼色外套)
         ctx.fillStyle = '#FFF'; ctx.fillRect(-w/2 + 2, -h/2 + 6, w-4, h*0.6);
-        ctx.fillStyle = '#1D2A4F'; ctx.fillRect(-w/2, -h/2 + 8, w * 0.6, h * 0.5);
-        ctx.fillStyle = '#4A5B69'; ctx.fillRect(-w/2 + w*0.6, -h/2 + 8, w*0.4, h*0.5);
+        ctx.fillStyle = '#1D2A4F'; ctx.fillRect(-w/2, -h/2 + 8, w * 0.6, h * 0.5); // 深蓝区
+        ctx.fillStyle = '#4A5B69'; ctx.fillRect(-w/2 + w*0.6, -h/2 + 8, w*0.4, h*0.5); // 灰色区
 
-        // 3. 脸部
-        ctx.fillStyle = '#ffdbac'; ctx.fillRect(-w/2 + 6, -h/2 + 2, w-12, 10);
+        // 脸部
+        ctx.fillStyle = '#fce2c4'; ctx.fillRect(-w/2 + 6, -h/2 + 2, w-12, 10);
 
-        // 4. 头发细节 (红发+黑挑染)
+        // 头发 (红发 + 额前黑色挑染)
         ctx.fillStyle = '#C61B23'; ctx.fillRect(-w/2 + 4, -h/2 - 2, w-8, 6);
-        ctx.fillStyle = '#120E15'; // 黑色挑染像素
-        ctx.fillRect(-w/2 + 6, -h/2 + 3, 3, 3);
+        ctx.fillStyle = '#120E15'; // 黑色挑染
+        ctx.fillRect(-w/2 + 6, -h/2 + 3, 4, 3);
         ctx.fillRect(-w/2 + 10, -h/2 + 1, 2, 2);
 
-        // 5. 眼睛
+        // 眼睛
         ctx.fillStyle = '#000'; ctx.fillRect(w/2 - 8, -h/2 + 6, 2, 2);
 
         ctx.restore();
     }
 
-    // --- 核心逻辑 ---
-    function initStars() {
-        state.stars = Array.from({length: 50}, () => ({
-            x: Math.random() * LOGICAL_W,
-            y: Math.random() * LOGICAL_H,
-            size: Math.random() * 2,
-            opacity: Math.random(),
-            pulse: 0.01 + Math.random() * 0.02
-        }));
-    }
-
+    // --- 游戏逻辑 ---
     function spawnPlatform(y) {
-        const width = 80 + Math.random() * 40;
-        let x = state.lastX - 130 + Math.random() * 260; // 优化可达性
+        const width = 85 + Math.random() * 40;
+        let x = state.lastX - 140 + Math.random() * 280;
         x = Math.max(20, Math.min(LOGICAL_W - width - 20, x));
         state.lastX = x;
-        let type = (state.score > 10 && Math.random() < 0.25) ? 'spike' : 'normal';
+        let type = (state.score > 8 && Math.random() < 0.22) ? 'spike' : 'normal';
         state.platforms.push({ x, y, width, height: 12, type });
     }
 
@@ -210,7 +196,7 @@
 
         if (state.input.left) { p.vx = -CONFIG.moveSpeed; p.facing = -1; }
         else if (state.input.right) { p.vx = CONFIG.moveSpeed; p.facing = 1; }
-        else { p.vx *= 0.8; }
+        else { p.vx *= 0.82; }
 
         p.vy += CONFIG.gravity;
         p.x += p.vx; p.y += p.vy;
@@ -245,7 +231,7 @@
             spawnPlatform(state.platforms[state.platforms.length-1].y + 115);
         }
 
-        if (p.y > LOGICAL_H || p.y < -50) endGame();
+        if (p.y > LOGICAL_H || p.y < -60) endGame();
 
         state.stars.forEach(s => {
             s.opacity += s.pulse;
@@ -255,7 +241,7 @@
 
     function draw() {
         const sky = ctx.createLinearGradient(0, 0, 0, LOGICAL_H);
-        sky.addColorStop(0, '#05050a'); sky.addColorStop(1, '#0e0e1a');
+        sky.addColorStop(0, '#050508'); sky.addColorStop(1, '#0c0c16');
         ctx.fillStyle = sky; ctx.fillRect(0, 0, LOGICAL_W, LOGICAL_H);
 
         state.stars.forEach(s => {
@@ -264,10 +250,9 @@
         });
 
         state.platforms.forEach(plat => {
-            ctx.save();
             if (plat.type === 'normal') {
                 const g = ctx.createLinearGradient(plat.x, plat.y, plat.x, plat.y+12);
-                g.addColorStop(0, 'rgba(255,255,255,0.95)'); g.addColorStop(1, 'rgba(210,220,255,0.8)');
+                g.addColorStop(0, 'rgba(255,255,255,0.98)'); g.addColorStop(1, 'rgba(215,225,255,0.85)');
                 ctx.fillStyle = g;
                 ctx.beginPath(); ctx.roundRect(plat.x, plat.y, plat.width, 12, 6); ctx.fill();
             } else {
@@ -278,7 +263,6 @@
                 }
                 ctx.fill();
             }
-            ctx.restore();
         });
         drawPlayer();
     }
@@ -289,8 +273,11 @@
         document.getElementById('overlay').style.display = 'none';
         state.player = { x: LOGICAL_W/2 - 12, y: 150, vx: 0, vy: 0, facing: 1 };
         state.platforms = [{ x: LOGICAL_W/2-60, y: 350, width: 120, type: 'normal' }];
-        for(let i=0; i<6; i++) spawnPlatform(350 + (i+1)*115);
-        initStars();
+        for(let i=0; i<7; i++) spawnPlatform(350 + (i+1)*115);
+        state.stars = Array.from({length: 40}, () => ({
+            x: Math.random() * LOGICAL_W, y: Math.random() * LOGICAL_H,
+            size: Math.random() * 2, opacity: Math.random(), pulse: 0.01 + Math.random()*0.02
+        }));
         loop();
     }
 
@@ -303,13 +290,12 @@
         state.isOver = true;
         document.getElementById('overlay').style.display = 'flex';
         document.getElementById('final-floor').innerText = state.score;
-        document.getElementById('status-title').innerText = win ? "CLEAR!" : "GAME OVER";
+        document.getElementById('status-title').innerText = win ? "CLEARED" : "FAILED";
         document.getElementById('status-title').style.color = win ? "#2ed573" : "#ff4757";
     }
 
     function resetGame() { initGame(); }
 
-    // --- 输入绑定 (带误触优化) ---
     const handleInput = (key, val) => {
         if (['ArrowLeft', 'a'].includes(key)) state.input.left = val;
         if (['ArrowRight', 'd'].includes(key)) state.input.right = val;
@@ -321,9 +307,9 @@
 
     const bindTouch = (id, key) => {
         const btn = document.getElementById(id);
-        btn.addEventListener('touchstart', e => { e.preventDefault(); handleInput(key, true); });
-        btn.addEventListener('touchend', e => { e.preventDefault(); handleInput(key, false); });
-        btn.addEventListener('touchcancel', e => { e.preventDefault(); handleInput(key, false); });
+        btn.addEventListener('touchstart', e => { e.preventDefault(); handleInput(key, true); }, {passive: false});
+        btn.addEventListener('touchend', e => { e.preventDefault(); handleInput(key, false); }, {passive: false});
+        btn.addEventListener('touchcancel', e => { e.preventDefault(); handleInput(key, false); }, {passive: false});
     };
 
     bindTouch('left-btn', 'ArrowLeft');
